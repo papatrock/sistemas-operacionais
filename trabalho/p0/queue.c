@@ -18,11 +18,13 @@ int queue_size(queue_t *queue){
 
 void queue_print(char *name, queue_t *queue, void print_elem(void*)){
 
-    if(!queue)
-        return;
-
-    for(queue_t *aux = queue; aux->next != aux; aux = aux->next)
-        print_elem(queue);
+    if (queue) {
+        queue_t *aux = queue;
+        do {
+            print_elem(aux);
+            aux = aux->next;
+        } while (aux != queue);
+    }
 }
 
 int queue_append (queue_t **queue, queue_t *elem){
