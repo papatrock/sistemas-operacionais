@@ -28,7 +28,7 @@ void queue_print(char *name, queue_t *queue, void print_elem(void*)){
 int queue_append (queue_t **queue, queue_t *elem){
     
     //fila nao existe
-    if(!queue)  //*queue?
+    if(!queue)
         return -1;
 
     //elemento nao existe
@@ -46,9 +46,6 @@ int queue_append (queue_t **queue, queue_t *elem){
         elem->prev = elem;  
         *queue = elem;
 
-        printf("Depois da atribuição: elem->next = %p, elem->prev = %p\n", (void*)(*queue)->next, (void*)(*queue)->prev);
-
-
         return 0;
     }
 
@@ -65,23 +62,41 @@ int queue_append (queue_t **queue, queue_t *elem){
 
 int queue_remove (queue_t **queue, queue_t *elem){
 
-    if(!queue)  //*queue?
+    if(!queue)  
         return -1;
 
     //elemento nao existe
     if(!elem)
         return -2;
 
-    if(queue_size(*queue) == 0)
+    //fila vazia
+    int size = queue_size(*queue);
+    if(size == 0)
         return 0;
 
     queue_t *aux = *queue;
-    while(aux->next != aux)
+    //percorre toda a fila até achar o elem ou chegar no fim
+    while(aux != elem && aux->next != aux)
             aux = aux->next;
     
-    queue_t *prev = aux->prev;
-    prev->next = aux->next;
-    aux->next->prev = prev;
+    //elem nao pertence a fila
+    if(aux != elem)
+        return -3;
+
+    //fila apenas com um elemento e esse elemento é elem
+    if(size == 1){
+        aux->next = NULL;
+        aux->prev = NULL;
+        *queue = NULL;
+        return 0;
+    }
+    
+    aux->prev->next = aux->next;
+    aux->next->prev = aux->prev;
+
+    //elem é o primeiro da fila
+    if(*queue == aux)
+        *queue = aux->next;
 
     aux->next = NULL;
     aux->prev = NULL;
