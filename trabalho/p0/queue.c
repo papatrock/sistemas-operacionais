@@ -1,4 +1,5 @@
 #include "queue.h"
+#include <stdio.h>
 
 
 int queue_size(queue_t *queue){
@@ -9,7 +10,7 @@ int queue_size(queue_t *queue){
 
     int count = 1;
 
-    for(queue_t *aux = queue; aux->next != aux; aux = aux->next)
+    for(queue_t *aux = queue; aux->next != queue; aux = aux->next)
         count++;
 
     return count;
@@ -34,14 +35,30 @@ int queue_append (queue_t **queue, queue_t *elem){
     if(!elem)
         return -2;
 
-    queue_t *aux = *queue;
-    while(aux->next != aux)
-        aux = aux->next;
+    //elemento pertence a outra fila
+    if(elem->next != NULL || elem->prev != NULL)
+        return -3;
 
-    elem->next = aux->next;
+    // fila vazia
+    if(queue_size(*queue) == 0){
+        
+        elem->next = elem;
+        elem->prev = elem;  
+        *queue = elem;
+
+        printf("Depois da atribuição: elem->next = %p, elem->prev = %p\n", (void*)(*queue)->next, (void*)(*queue)->prev);
+
+
+        return 0;
+    }
+
+    queue_t *aux = (*queue)->prev;
+    aux->next = elem;
+    elem->next = *queue;
     elem->prev = aux;
 
     aux->next = elem;
+    (*queue)->prev = elem;
 
     return 0;
 }
