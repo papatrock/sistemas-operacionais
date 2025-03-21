@@ -1,3 +1,11 @@
+/*
+
+Nome: Patrick Oliveira Lemes
+
+GRR: 20211777
+
+*/
+
 #include "queue.h"
 
 int queue_size(queue_t *queue){
