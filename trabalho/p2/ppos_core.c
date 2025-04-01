@@ -5,7 +5,7 @@
 
 #define STACKSIZE 64*1024
 
-task_t MainTask; ucontext_t CurrentContext;
+task_t MainTask, *CurrentTask, *PreviousTask;
 
 
 /**
@@ -17,24 +17,9 @@ void ppos_init(){
     setvbuf (stdout, 0, _IONBF, 0) ;
     
     //inicializa MainTask
-    MainTask.prev = NULL;
-    MainTask.next = NULL;
     MainTask.id = 0; //main context sempre é 0;
-    getcontext(&MainTask.context); //contexto atual em MainContext
-    char *stack = malloc(STACKSIZE);
-    if(stack){
-        MainTask.context.uc_stack.ss_sp = stack ;
-        MainTask.context.uc_stack.ss_size = STACKSIZE ;
-        MainTask.context.uc_stack.ss_flags = 0 ;
-        MainTask.context.uc_link = 0 ;
-    }
-    else{
-        perror ("Erro na criação da pilha: ") ;
-        exit (1) ;
-    }
-    //TODO como fazer isso
-    //makecontext (&MainTask.context, (void*)(*main), 0,) ;
-    MainTask.status = 1; //0 pronta, 1 rodando -1 suspensa?
+    
+    CurrentTask = &MainTask;
 
 }
 
@@ -71,7 +56,7 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     task->next = NULL;
     task->id = aux->id + 1;  //TODO função que itera tarefas e ve qual ID está disponivel
     
-    //TODO como saber quantos
+    //TODO como saber quantos arguemtnos
     makecontext(&task->context,(void *)start_routine, 1, arg);
     task->status = 0;
     
@@ -88,12 +73,11 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
 int task_switch (task_t *task){
     if(!task)
         return -1;
-    //if(!&task->context)
-    //    return -1;
-    getcontext(&CurrentContext);
-
-    swapcontext(&CurrentContext,&task->context);
-
+    
+    task->prev = CurrentTask;
+    CurrentTask = task;    
+    swapcontext(&task->prev->context,&task->context);
+    
     return 0;
     
 }
@@ -105,6 +89,13 @@ int task_switch (task_t *task){
  */
 void task_exit (int exit_code){
 
+    // limpa a pilha, troca de contexto TODO isso pode dar erro? deu errado
+    //setcontext(CurrentTask->prev);
+    free(CurrentTask->context.uc_stack.ss_sp);
+
     task_switch(&MainTask);
-    //TODO free da pilha
+}
+
+int task_id(){
+    return CurrentTask->id;
 }
