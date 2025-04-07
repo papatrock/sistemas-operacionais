@@ -18,6 +18,7 @@ void ppos_init(){
     
     //inicializa MainTask
     MainTask.id = 0; //main context sempre é 0;
+    MainTask.status = 1; //rodando
     
     CurrentTask = &MainTask;
 
@@ -54,7 +55,8 @@ int task_init (task_t *task, void (*start_routine)(void *),  void *arg){
     aux->next = task;
     task->prev = aux;
     task->next = NULL;
-    task->id = aux->id + 1;  //TODO função que itera tarefas e ve qual ID está disponivel
+    task->id = aux->id + 1;
+    task->status = 0; // pronta
     
     //TODO como saber quantos arguemtnos
     makecontext(&task->context,(void *)start_routine, 1, arg);
@@ -75,8 +77,15 @@ int task_switch (task_t *task){
         return -1;
     
     task->prev = CurrentTask;
-    CurrentTask = task;    
-    swapcontext(&task->prev->context,&task->context);
+    CurrentTask = task;
+    task->status = 1;
+    task->prev->status = 0;
+    if (task->prev && task->prev != task) {
+        swapcontext(&task->prev->context, &task->context);
+    } else {
+        setcontext(&task->context);
+    }
+    
     
     return 0;
     
@@ -88,12 +97,28 @@ int task_switch (task_t *task){
  * @param exit_code (nao sera usado ainda)
  */
 void task_exit (int exit_code){
+    task_t *aux;
+    if(task_id() != 0){
+        aux = CurrentTask;
+        aux->status = -1; // suspensa
+    }
+    else{
+        task_t *curr = MainTask.next;
+        task_t *next;
+        //TODO talvez só dar free nas tarefas com status -1
+        while (curr != NULL) {
+            next = curr->next;
+    
+            if (curr->context.uc_stack.ss_sp != NULL)
+                free(curr->context.uc_stack.ss_sp); // libera a stack
+    
+            curr = next;
+        }
+    }
+     task_switch(&MainTask);
 
-    // limpa a pilha, troca de contexto TODO isso pode dar erro? deu errado
-    //setcontext(CurrentTask->prev);
-    free(CurrentTask->context.uc_stack.ss_sp);
-
-    task_switch(&MainTask);
+     perror("Erro no task_exit");
+     exit(1);
 }
 
 int task_id(){
