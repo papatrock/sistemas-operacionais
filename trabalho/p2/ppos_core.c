@@ -1,3 +1,8 @@
+/*
+    Patrick Oliveira Lemes
+    GRR20211777
+*/
+
 #include "ppos_data.h"
 #include "ppos.h"
 #include <stdio.h>
@@ -97,24 +102,7 @@ int task_switch (task_t *task){
  * @param exit_code (nao sera usado ainda)
  */
 void task_exit (int exit_code){
-    task_t *aux;
-    if(task_id() != 0){
-        aux = CurrentTask;
-        aux->status = -1; // suspensa
-    }
-    else{
-        task_t *curr = MainTask.next;
-        task_t *next;
-        //TODO talvez só dar free nas tarefas com status -1
-        while (curr != NULL) {
-            next = curr->next;
-    
-            if (curr->context.uc_stack.ss_sp != NULL)
-                free(curr->context.uc_stack.ss_sp); // libera a stack
-    
-            curr = next;
-        }
-    }
+
      task_switch(&MainTask);
 
      perror("Erro no task_exit");
