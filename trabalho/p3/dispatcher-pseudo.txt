@@ -1,0 +1,32 @@
+função dispatcher
+início
+   // retira o dispatcher da fila de prontas, para evitar que ele ative a si próprio
+   queue_remove (...)
+
+   // enquanto houverem tarefas de usuário
+   enquanto ( userTasks > 0 )
+
+      // escolhe a próxima tarefa a executar
+      próxima = scheduler ()
+
+      // escalonador escolheu uma tarefa?      
+      se próxima ≠ NULO então
+
+         // transfere controle para a próxima tarefa
+         task_switch (próxima)
+         
+         // voltando ao dispatcher, trata a tarefa de acordo com seu estado
+         caso o estado da tarefa "próxima" seja:
+            PRONTA    : ...
+            TERMINADA : ...
+            SUSPENSA  : ...
+            (etc)
+         fim caso         
+
+      fim se
+
+   fim enquanto
+
+   // encerra a tarefa dispatcher
+   task_exit(0)
+fim
