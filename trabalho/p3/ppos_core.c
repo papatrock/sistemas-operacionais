@@ -57,25 +57,32 @@ void dispatcher(){
 
         // escolhe proxima tarefa (FCFS - First come first solved)
         task_t *nextTask = schedulerFCFS();
+        //se a main for o primeiro da fila e ainda tiver tarefas de usuario, passa pro proximo da fila
+        if(nextTask->id == 0){
+            nextTask = nextTask->next;
+        }
+
         if(nextTask){
 
+            #ifdef DEBUG
+            printf("Tarefa atual: %d\n user tasks:%d \n",nextTask->id,userTasks);
+            #endif
+            
             queue_remove((queue_t**)&ReadyQueue, (queue_t*)nextTask);
             task_switch(nextTask);
-
+           
             switch (nextTask->status)
             {
-                case PRONTA:
+                case RODANDO:
                 nextTask->status = PRONTA;
                 queue_append((queue_t**)&ReadyQueue, (queue_t*)nextTask);
                 break;
 
-            case SUSPENSA:
-                nextTask->status = SUSPENSA;
+            case SUSPENSA: //nao usado ainda
                 queue_append((queue_t**)&SuspendedQueue, (queue_t*)nextTask);
                 break;
 
-                case TERMINADA:
-                nextTask->status = TERMINADA;
+            case TERMINADA:
                 queue_append((queue_t**)&FinishedQueue, (queue_t*)nextTask);
                 userTasks--;
                 break;
@@ -85,7 +92,6 @@ void dispatcher(){
             }
         } 
     }
-    
     task_exit(0);
     
 }
@@ -121,32 +127,45 @@ void task_exit (int exit_code){
     if(CurrentTask->id == 0){
         task_yield();
 
+        //fim do dispatcher
+        #ifdef DEBUG
+        printf("Passou do task_yield no exit\n");
+        #endif
+        task_switch(&MainTask);
+
     }
     //exit no dispatcher, passa o controle pra main
     else if(CurrentTask->id == 1){
         //TODO limpa pilhas
-        freeQueueTasks(ReadyQueue);
-        freeQueueTasks(FinishedQueue);
-        freeQueueTasks(SuspendedQueue);
+        //freeQueueTasks(ReadyQueue);
+        //freeQueueTasks(FinishedQueue);
+        //freeQueueTasks(SuspendedQueue);
+        #ifdef DEBUG
+        printf("chegou no exit do dispatcher, retorna pra main e finaliza\n");
+        #endif
         task_switch(&MainTask);
         
     }
     // fim de uma task, retira da fila de prontas ou <suspensas> e coloca na fila de finalizadas
     else{
-        CurrentTask->id = TERMINADA;
+        #ifdef DEBUG
+        printf("EXIT DE TAREFA, seta status como terminada\n");
+        #endif
+        CurrentTask->status = TERMINADA;
         //passa o controle pro dispatcher
-        task_switch(&Dispatcher);
+        task_yield();
     }
     
-    perror("Erro no task_exit");
-    exit(1);
+    //perror("Erro no task_exit");
+    //exit(1);
 }
 
 void task_yield(){
 
-    CurrentTask->status = PRONTA;
-    queue_append((queue_t**)&ReadyQueue,(queue_t*)CurrentTask);
-
+    if (CurrentTask->status != TERMINADA) {
+        CurrentTask->status = PRONTA;
+        queue_append((queue_t**)&ReadyQueue, (queue_t*)CurrentTask);
+    }
     task_switch(&Dispatcher);
 }
 
@@ -159,15 +178,10 @@ int task_switch (task_t *task){
     if(!task)
         return -1;
 
-    // Coloca a tarefa anterior na fila de prontas
     PreviousTask = CurrentTask; 
-    PreviousTask->status = PRONTA;
-    queue_append((queue_t**)&ReadyQueue,(queue_t*)PreviousTask);
 
-    //Remove tarefa atual da fila
     CurrentTask = task;
     CurrentTask->status = RODANDO;
-    queue_remove((queue_t**)&ReadyQueue,(queue_t*)PreviousTask);
 
     //troca de contexto
     swapcontext(&PreviousTask->context, &CurrentTask->context);
