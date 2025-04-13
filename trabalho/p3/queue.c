@@ -8,16 +8,18 @@ GRR: 20211777
 
 #include "queue.h"
 
-int queue_size(queue_t *queue){
-    
-    //fila vazia
-    if(!queue)
+int queue_size(queue_t *queue)
+{
+    if (!queue)
         return 0;
 
     int count = 1;
+    queue_t *aux = queue;
 
-    for(queue_t *aux = queue; aux->next != queue; aux = aux->next)
+    while (aux->next && aux->next != queue) {
         count++;
+        aux = aux->next;
+    }
 
     return count;
 }

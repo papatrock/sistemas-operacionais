@@ -9,6 +9,11 @@
 #ifndef __PPOS__
 #define __PPOS__
 
+#define TERMINADA -1
+#define SUSPENSA 0
+#define PRONTA 1
+#define RODANDO 2
+
 // estruturas de dados necessárias neste projeto
 #include "ppos_data.h"
 
