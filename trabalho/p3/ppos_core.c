@@ -16,8 +16,6 @@ task_t MainTask, Dispatcher, *CurrentTask,*PreviousTask,*ReadyQueue, *SuspendedQ
 
 int idCounter, userTasks;
 
-//temp
-void freeQueueTasks(task_t *queue);
 
 void print_elem (void *ptr)
 {
@@ -137,9 +135,10 @@ void task_exit (int exit_code){
     //exit no dispatcher, passa o controle pra main
     else if(CurrentTask->id == 1){
         //TODO limpa pilhas
-        //freeQueueTasks(ReadyQueue);
-        //freeQueueTasks(FinishedQueue);
-        //freeQueueTasks(SuspendedQueue);
+        queue_append((queue_t**)&FinishedQueue,(queue_t*)&Dispatcher);
+        freeQueueTasks(ReadyQueue);
+        freeQueueTasks(FinishedQueue);
+        freeQueueTasks(SuspendedQueue);
         #ifdef DEBUG
         printf("chegou no exit do dispatcher, retorna pra main e finaliza\n");
         #endif
@@ -251,19 +250,17 @@ int task_id(){
 }
 
 void freeQueueTasks(task_t *queue){
-    task_t *next = queue->next;
-    
-    while (queue_size((queue_t*)queue) > 0)
+    while (queue)
     {
-        queue_remove((queue_t**)&queue,(queue_t*)&queue);
-        if(queue->context.uc_stack.ss_sp){
-            free(queue->context.uc_stack.ss_sp);
-            // dezfaz o registro da pilha no valgrind
-            VALGRIND_STACK_DEREGISTER (queue->vg_id);
+        task_t *elem = queue;
+        queue_remove((queue_t**)&queue,(queue_t*)queue);
+        if(elem->id != 0){
+            if(elem->context.uc_stack.ss_sp){
+                free(elem->context.uc_stack.ss_sp);
+                // dezfaz o registro da pilha no valgrind
+                VALGRIND_STACK_DEREGISTER (elem->vg_id);
+            }
         }
-        queue = next;
-        next = queue->next;
     }
     
 }
-
