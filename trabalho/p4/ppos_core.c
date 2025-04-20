@@ -43,16 +43,24 @@ task_t *scheduler(){
         task_t *aux = ReadyQueue->next;
         task_t *maxPrio = ReadyQueue;
         do{
-            if(aux->id != 0){
-                if(aux->agingPrio < maxPrio->agingPrio){
-                    maxPrio->agingPrio--; //envelhece a tarefa
-                    maxPrio = aux;
-                }else{
-                    aux->agingPrio--; //evelhece a tarefa
-                }
-            }
+            if(aux->id != 0)
+                if(aux->agingPrio < maxPrio->agingPrio)
+                    maxPrio = aux; 
+            
         }while((aux = aux->next) != ReadyQueue);
 
+
+        // Envelhece todas menos a escolhida
+        aux = ReadyQueue;
+        do {
+            if (aux != maxPrio && aux->id != 0) {
+                if (aux->agingPrio > -20)
+                    aux->agingPrio--;
+            }
+            aux = aux->next;
+        } while (aux != ReadyQueue);
+
+        // Reset da prioridade dinâmica da escolhida
         maxPrio->agingPrio = maxPrio->staticPrio;
         return maxPrio;
     }
