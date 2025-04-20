@@ -23,3 +23,6 @@ clean:
 
 purge: clean
 	rm -rf pingpong-scheduler
+
+tar:
+	tar -czf pingpong-scheduler.tgz *.c *.h Makefile
