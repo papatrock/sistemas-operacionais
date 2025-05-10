@@ -1,16 +1,25 @@
 CFLAGS = -Wall -g
 
-Objs = pingpong-preempcao.o ppos_core.o queue.o
+Objs = ppos_core.o queue.o
 
 all: pingpong-preempcao
 
-debug: CFLAGS += -D_DEBUG_ -g
+debug: clean
+	make CFLAGS="$(CFLAGS) -DDEBUG" all
 
-pingpong-preempcao: $(Objs)
-	gcc $(Objs) $(CFLAGS) -o pingpong-preempcao
+pingpong-preempcao: pingpong-preempcao.o $(Objs)
+	gcc pingpong-preempcao.o $(Objs) $(CFLAGS) -o pingpong-preempcao
 
 pingpong-preempcao.o: pingpong-preempcao.c ppos_core.c ppos.h
 	gcc $(CFLAGS) -c pingpong-preempcao.c
+
+stress: pingpong-preempcao-stress
+
+pingpong-preempcao-stress: pingpong-preempcao-stress.o $(Objs)
+	gcc pingpong-preempcao-stress.o $(Objs) $(CFLAGS) -o pingpong-preempcao-stress
+
+pingpong-preempcao-stress.o: pingpong-preempcao-stress.c ppos_core.c ppos.h
+	gcc $(CFLAGS) -c pingpong-preempcao-stress.c
 
 ppos_core.o: ppos_core.c ppos.h
 	gcc $(CFLAGS) -c ppos_core.c
@@ -22,7 +31,7 @@ clean:
 	rm -rf *~ *.o
 
 purge: clean
-	rm -rf pingpong-preempcao
+	rm -rf pingpong-preempcao pingpong-preempcao-stress
 
 tar:
 	tar -czf pingpong-preempcao.tgz *.c *.h Makefile

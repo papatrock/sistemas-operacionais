@@ -3,6 +3,8 @@
 //
 // Carlos Maziero, 2015
 
+#define _POSIX_C_SOURCE 199309L
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -29,9 +31,9 @@ int main()
 {
   // registra a ação para o sinal de timer SIGALRM (sinal do timer)
   action.sa_handler = tratador;
-  sigemptyset(&action.sa_mask);
-  action.sa_flags = 0;
-  if (sigaction(SIGALRM, &action, 0) < 0)
+  sigemptyset(&action.sa_mask);           // nenhum dos sinais está ignorado
+  action.sa_flags = 0;                    // flags adicionais que nao nos interessa
+  if (sigaction(SIGALRM, &action, 0) < 0) // se receber SIGALRM, faça a ação
   {
     perror("Erro em sigaction: ");
     exit(1);

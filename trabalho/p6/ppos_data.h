@@ -22,6 +22,9 @@ typedef struct task_t
   int agingPrio;
   int systemProcess;
   int quantum;
+  unsigned int init_time;
+  int activations;
+  unsigned int processor_time;
 } task_t;
 
 // estrutura que define um semáforo

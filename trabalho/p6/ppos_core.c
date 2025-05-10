@@ -19,6 +19,7 @@ GRR20211777
 task_t MainTask, Dispatcher, *CurrentTask, *PreviousTask, *ReadyQueue, *SuspendedQueue, *FinishedQueue;
 
 int idCounter, userTasks;
+unsigned int initial_processor_time, system_time = 0; // Contao o tempo do sistema
 
 // estrutura que define um tratador de sinal (deve ser global ou static)
 struct sigaction action;
@@ -42,7 +43,10 @@ void ppos_init()
   MainTask.next = NULL;
   MainTask.prev = NULL;
   MainTask.systemProcess = 1; // Main é um processo do sistema
-  MainTask.quantum = 20;
+  MainTask.quantum = 20;      // desnecessario, só ñ pode ser 0
+  MainTask.init_time = systime();
+  MainTask.activations = 0;
+  MainTask.processor_time = 0;
   CurrentTask = &MainTask;
 
   //  cria dispatcher
@@ -81,6 +85,7 @@ void ppos_init()
 */
 void tick_handler()
 {
+  system_time++; //+ 1000 microsegundo
   if (!CurrentTask->systemProcess)
     CurrentTask->quantum--;
   if (CurrentTask->quantum <= 0)
@@ -90,6 +95,11 @@ void tick_handler()
 #endif
     task_yield();
   }
+}
+
+unsigned int systime()
+{
+  return system_time;
 }
 
 void print_elem(void *ptr)
@@ -190,7 +200,6 @@ void dispatcher()
 #ifdef DEBUG
     printf("USER TASKS:%d\n", userTasks);
 #endif
-
     // escolhe proxima tarefa (fila com prioridade)
     task_t *nextTask = scheduler();
     // se a main for o primeiro da fila e ainda tiver tarefas de usuario, passa pro proximo da fila
@@ -201,16 +210,17 @@ void dispatcher()
 
     if (nextTask)
     {
-
 #ifdef DEBUG
       printf("Tarefa atual: %d\n user tasks:%d \n", nextTask->id, userTasks);
 #endif
-
       queue_remove((queue_t **)&ReadyQueue, (queue_t *)nextTask);
       nextTask->quantum = 20;
 
+      initial_processor_time = systime();
       task_switch(nextTask);
+      nextTask->processor_time += (systime() - initial_processor_time);
 
+      //   ao voltar pro dispatcher:
       switch (nextTask->status)
       {
       case RODANDO:
@@ -241,9 +251,11 @@ void task_exit(int exit_code)
   // exit na main, passa pro dispatcher
   if (CurrentTask->id == 0)
   {
+    CurrentTask->activations++; // conta a ativação fianl do dispatcher (para ficar parecido com a saida esperada)
+    printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
     task_yield();
 
-// fim do dispatcher
+    // fim do dispatcher
 #ifdef DEBUG
     printf("Passou do task_yield no exit\n");
 #endif
@@ -260,6 +272,7 @@ void task_exit(int exit_code)
 #ifdef DEBUG
     printf("chegou no exit do dispatcher, retorna pra main e finaliza\n");
 #endif
+    printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
     task_switch(&MainTask);
   }
   // fim de uma task, retira da fila de prontas ou <suspensas> e coloca na fila de finalizadas
@@ -269,6 +282,8 @@ void task_exit(int exit_code)
     printf("EXIT DE TAREFA, seta status como terminada\n");
 #endif
     CurrentTask->status = TERMINADA;
+    CurrentTask->processor_time = CurrentTask->processor_time + (20 - CurrentTask->quantum); // quanto do quantum utilizou antes de terminar
+    printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
     // passa o controle pro dispatcher
     task_yield();
   }
@@ -302,8 +317,11 @@ int task_switch(task_t *task)
 
   CurrentTask = task;
   CurrentTask->status = RODANDO;
+  CurrentTask->activations++;
 
   // troca de contexto
+  // começa a conta o tempo de processamento
+
   swapcontext(&PreviousTask->context, &CurrentTask->context);
 
   return 0;
@@ -345,6 +363,9 @@ int task_init(task_t *task, void (*start_routine)(void *), void *arg)
   task->staticPrio = 0; // Prioridade default
   task->agingPrio = 0;
   task->systemProcess = 0; // processo de usuario (default)
+  task->init_time = systime();
+  task->activations = 0;
+  task->processor_time = 0;
   // coloca a task no fim da fila de prontas
   // TODO tratar erros de fila
   queue_append((queue_t **)&ReadyQueue, (queue_t *)task);
