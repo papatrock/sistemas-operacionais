@@ -135,7 +135,6 @@ int mqueue_destroy (mqueue_t *queue) ;
 // informa o número de mensagens atualmente na fila
 int mqueue_msgs (mqueue_t *queue) ;
 
-//limpa a fila de tarefas
 void freeQueueTasks(task_t *queue);
 
 //==============================================================================
