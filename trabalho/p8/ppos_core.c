@@ -272,16 +272,15 @@ void task_exit(int exit_code)
   // Se tiver tarefas suspensas esperando pela task, libera elas
   else
   {
+    printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
 #ifdef DEBUG
     printf("EXIT DE TAREFA, seta status como terminada\n");
 #endif
     CurrentTask->status = TERMINADA;
     CurrentTask->processor_time = CurrentTask->processor_time + (20 - CurrentTask->quantum); // quanto do quantum utilizou antes de terminar
     while (queue_size > 0)
-      // elem                      file
       task_awake(CurrentTask->awaiting_queue, &CurrentTask->awaiting_queue);
 
-    printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
     // passa o controle pro dispatcher
     task_yield();
   }
