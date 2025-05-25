@@ -25,7 +25,7 @@ typedef struct task_t
   unsigned int init_time;
   int activations;
   unsigned int processor_time;
-  struct queue_t *awaiting_queue;
+  struct task_t *awaiting_queue; // Fila que armazena tarefas aguardando
 } task_t;
 
 // estrutura que define um semáforo

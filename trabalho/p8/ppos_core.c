@@ -42,14 +42,13 @@ void ppos_init()
   MainTask.status = RODANDO;
   MainTask.next = NULL;
   MainTask.prev = NULL;
-  MainTask.systemProcess = 1; // Main é um processo do sistema
-  MainTask.quantum = 20;      // desnecessario, só ñ pode ser 0
+  MainTask.systemProcess = 0; // Main não é um processo do sistema
+  MainTask.quantum = 20;
   MainTask.init_time = systime();
   MainTask.activations = 0;
   MainTask.processor_time = 0;
   CurrentTask = &MainTask;
   MainTask.awaiting_queue = NULL;
-
 
   //  cria dispatcher
   task_init(&Dispatcher, dispatcher, NULL);
@@ -125,16 +124,14 @@ prioridade estática e as não escolhidas envelhecem em -1
 */
 task_t *scheduler()
 {
-
   if (queue_size((queue_t *)ReadyQueue) > 0)
   {
     task_t *aux = ReadyQueue->next;
     task_t *maxPrio = ReadyQueue;
     do
     {
-      if (aux->id != 0)
-        if (aux->agingPrio < maxPrio->agingPrio)
-          maxPrio = aux;
+      if (aux->agingPrio < maxPrio->agingPrio)
+        maxPrio = aux;
 
     } while ((aux = aux->next) != ReadyQueue);
 
@@ -142,7 +139,7 @@ task_t *scheduler()
     aux = ReadyQueue;
     do
     {
-      if (aux != maxPrio && aux->id != 0)
+      if (aux != maxPrio)
       {
         if (aux->agingPrio > -20)
           aux->agingPrio--;
@@ -203,11 +200,6 @@ void dispatcher()
 #endif
     // escolhe proxima tarefa (fila com prioridade)
     task_t *nextTask = scheduler();
-    // se a main for o primeiro da fila e ainda tiver tarefas de usuario, passa pro proximo da fila
-    if (nextTask->id == 0)
-    {
-      nextTask = nextTask->next;
-    }
 
     if (nextTask)
     {
@@ -285,6 +277,10 @@ void task_exit(int exit_code)
 #endif
     CurrentTask->status = TERMINADA;
     CurrentTask->processor_time = CurrentTask->processor_time + (20 - CurrentTask->quantum); // quanto do quantum utilizou antes de terminar
+    while (queue_size > 0)
+      // elem                      file
+      task_awake(CurrentTask->awaiting_queue, &CurrentTask->awaiting_queue);
+
     printf("Task %d exit: execution time %4d ms, processor time %4d ms, %d activations\n", CurrentTask->id, systime() - CurrentTask->init_time, CurrentTask->processor_time, CurrentTask->activations);
     // passa o controle pro dispatcher
     task_yield();
@@ -397,23 +393,32 @@ int task_id()
   return CurrentTask->id;
 }
 
-void task_suspend (task_t **queue){
+void task_suspend(task_t **queue)
+{
+  queue_remove((queue_t **)ReadyQueue, (queue_t *)CurrentTask); // Remove a tarefa atual da fial de prontas (VERIFICAR SE PRECISA)
 
+  CurrentTask->status = SUSPENSA;
+
+  queue_append((queue_t **)queue, (queue_t *)CurrentTask);
+
+  task_yield(); // retorna pro dispatcher
 }
 
-void task_awake (task_t * task, task_t **queue){
+int task_wait(task_t *task)
+{
+  task_suspend(&task->awaiting_queue);
 
+  return task->id;
 }
 
-int task_wait (task_t *task){
-  
-  queue_append((queue_t**)task,(queue_t*)CurrentTask);
-  
-  printf("Teste: %d\n",task->next->id);
-
-  //task->awaiting_queue = (queue_t*) CurrentTask; // tarefa atual aguarda task terminar
-  
-  return 0;
+void task_awake(task_t *task, task_t **queue)
+{
+  if (queue && task)
+  {
+    task->status = PRONTA;
+    queue_remove((queue_t **)queue, (queue_t *)task);
+    queue_append((queue_t **)ReadyQueue, (queue_t *)task);
+  }
 }
 
 void freeQueueTasks(task_t *queue)
